@@ -1,0 +1,59 @@
+# raspberryPi Server create new_1
+# Python code
+
+import RPi.GPIO as GPIO
+import time
+import mysql.connector
+
+# GPIO 핀 설정
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(23, GPIO.IN)
+GPIO.setup(24, GPIO.IN)
+
+# MariaDB 연결
+conn = mysql.connector.connect(
+    host='localhost',
+    user='root',
+    password='password',
+    database='sensor_data'
+)
+
+# 쿼리 실행
+cur = conn.cursor()
+cur.execute('CREATE TABLE IF NOT EXISTS sensor_data (sensor_id INT, sensor_value FLOAT)')
+cur.execute('INSERT INTO sensor_data (sensor_id, sensor_value) VALUES (1, 0.0), (2, 0.0)')
+conn.commit()
+
+# 무한 루프
+while True:
+    # PIR 센서 값 수집
+    if GPIO.input(23) == GPIO.HIGH:
+        sensor_value1 = 1.0
+    else:
+        sensor_value1 = 0.0
+
+    # 무게 센서 값 수집
+    if GPIO.input(24) == GPIO.HIGH:
+        sensor_value2 = 1.0
+    else:
+        sensor_value2 = 0.0
+
+    # MariaDB에 값 저장
+    cur.execute('UPDATE sensor_data SET sensor_value1 = %s, sensor_value2 = %s', (sensor_value1, sensor_value2))
+    conn.commit()
+
+    # DB에서 값 가져오기
+    cur.execute('SELECT sensor_value1, sensor_value2 FROM sensor_data')
+    rows = cur.fetchall()
+
+    # 조건문 실행
+    if rows[0][0] == 1 and rows[0][1] == 1:
+        print('Motion detected and weight detected.')
+    else:
+        print('Nothing detected.')
+
+    # 1 초 대기
+    time.sleep(1)
+
+# GPIO 핀 해제
+GPIO.cleanup()
