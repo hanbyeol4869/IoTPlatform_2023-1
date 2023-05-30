@@ -1,0 +1,48 @@
+#파이썬 코드, 센서 값 수집, 수집한 데이터를 MariaDB로 보내고 저장, 저장된 값을 조건문 검사를 통해 차량 신호등, 보행자 신호등을 켤지 말지 결정하는 코드.
+단, 조건문 검사 후 5초 후에 차량용 신호등은 빨간불, 보행자 신호등은 초록불로 시작해야 함.
+
+import pymysql
+import RPi.GPIO as GPIO
+
+# PIR 센서와 무게 센서를 GPIO 핀에 연결합니다.
+pir_pin = 17
+weight_pin = 27
+
+# MariaDB에 연결합니다.
+db = pymysql.connect(host='localhost', user='root', password='password', db='traffic')
+
+# PIR 센서와 무게 센서 값을 수집합니다.
+pir_value = GPIO.input(pir_pin)
+weight_value = GPIO.input(weight_pin)
+
+# MariaDB에 값을 저장합니다.
+cursor = db.cursor()
+cursor.execute("INSERT INTO sensor_values (pir_value, weight_value) VALUES (%s, %s)", (pir_value, weight_value))
+db.commit()
+
+# MariaDB에서 값을 가져옵니다.
+cursor.execute("SELECT pir_value, weight_value FROM sensor_values")
+rows = cursor.fetchall()
+
+# 조건문을 통해 차량 신호등과 보행자 신호등을 실행할지 여부를 결정합니다.
+if rows[0][0] == 1 and rows[0][1] == 1:
+  # PIR 센서와 무게 센서 모두 감지되면 차량 신호등은 빨간불로 바뀌고 보행자 신호등은 초록불로 바뀝니다.
+  GPIO.output(17, GPIO.LOW)
+  GPIO.output(27, GPIO.HIGH)
+else:
+  # PIR 센서와 무게 센서 모두 감지되지 않으면 차량 신호등은 초록불로 바뀌고 보행자 신호등은 빨간불로 바뀝니다.
+  GPIO.output(17, GPIO.HIGH)
+  GPIO.output(27, GPIO.LOW)
+
+# 5초 후에 조건문을 다시 확인합니다.
+time.sleep(5)
+
+# 조건문을 다시 확인합니다.
+if rows[0][0] == 1 and rows[0][1] == 1:
+  # PIR 센서와 무게 센서 모두 감지되면 차량 신호등은 빨간불로 바뀌고 보행자 신호등은 초록불로 바뀝니다.
+  GPIO.output(17, GPIO.LOW)
+  GPIO.output(27, GPIO.HIGH)
+else:
+  # PIR 센서와 무게 센서 모두 감지되지 않으면 차량 신호등은 초록불로 바뀌고 보행자 신호등은 빨간불로 바뀝니다.
+  GPIO.output(17, GPIO.HIGH)
+  GPIO.output(27, GPIO.LOW)
