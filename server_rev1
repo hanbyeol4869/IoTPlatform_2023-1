@@ -1,0 +1,97 @@
+import sys
+import mysql.connector
+import time
+import RPi.GPIO as GPIO
+
+# 센서 파일을 불러와 센서 값 수집
+pir_sensor = open("./pir_sensor.cpp", "r")
+weight_sensor = open("./weight_sensor.cpp", "r")
+pir_sensor_value = int(pir_sensor.read())
+weight_sensor_value = int(weight_sensor.read())
+
+#MariaDB에 센서 값 저장
+connection = mysql.connector.connect(host="localhost"
+                                     , user="root"
+                                     , password = "password"
+                                     , database = "database_name")
+cursor = connection.cursor()
+cursor.execute("INSERT INTO sensors(pir_sensor_value, weight_sensor_value)VALUES(%s, %s)",
+                (pir_sensor_value, weight_sensor_value))
+connection.commint()
+
+# MariaDB에 저장된 센서 값을 조건문에 따라 실행할지 말지 여부 결정
+if pir_sensor_value > 0 and weight_sensor_value > 0:
+    #7세그먼트 코드 파일 가져와 실행
+    seven_segment = open("./seven_segment_code.py", "r")
+    seven_segment_value = int(seven_segment.read())
+    # 신호등 Low -> red, HIGH -> green
+    GPIO.output(17, GPIO.LOW) #차량
+    GPIO.output(27, GPIO.HIGH) #보행자
+    # 30초 지나면 차량 -> green , 보행자 -> red
+    time.sleep(30)
+    GPIO.output(17, GPIO.HIGH) 
+    GPIO.output(27, GPIO.LOW)
+    #점멸 코드 작성
+
+else:
+    -sys.stdout.write("No need to run the code.")
+
+# 센서 파일 닫음
+pir_sensor.close()
+weight_sensor.close()
+
+
+
+
+
+2. 참고로 아래 코드 적색 점멸 신호등 코드는 if 문 time.sleep(30) 아래에 재수정할 것.
+- LOW와 HIGH 정의할 것.
+
+import RPi.GPIO as GPIO
+import time
+
+# GPIO 핀 번호 설정
+red_pin = 17
+
+# GPIO 초기화
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(red_pin, GPIO.OUT)
+
+# 신호등 적색 점멸 함수
+def flash_red_light():
+    for _ in range(5):  # 5번 반복
+        GPIO.output(red_pin, GPIO.HIGH)  # 신호등 적색 LED 켜기
+        time.sleep(0.5)  # 0.5초 대기
+        GPIO.output(red_pin, GPIO.LOW)  # 신호등 적색 LED 끄기
+        time.sleep(0.5)  # 0.5초 대기
+
+# 신호등 적색 점멸 실행
+flash_red_light()
+
+# GPIO 리셋
+GPIO.cleanup()
+
+
+3. 끌 때는 점멸 이외에는 작동하지 않아야 하므로 아래 코드도 위에에 같이 작성
+import RPi.GPIO as GPIO
+
+# GPIO 핀 번호 설정
+red_pin = 17
+green_pin = 18
+
+# GPIO 초기화
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(red_pin, GPIO.OUT)
+GPIO.setup(green_pin, GPIO.OUT)
+
+# 신호등 LED 끄기
+def turn_off_traffic_lights():
+    GPIO.output(green_pin, GPIO.LOW)  # 녹색 LED 끄기
+
+# 신호등 LED 끄기 실행
+turn_off_traffic_lights()
+
+# GPIO 리셋
+GPIO.cleanup()
